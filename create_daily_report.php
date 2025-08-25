@@ -1,14 +1,19 @@
 <?php
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/csrf.php';
 
 $success = "";
 $error = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!csrf_validate($_POST['csrf_token'] ?? null)) {
+        $error = "❌ Invalid form submission. Please try again.";
+    } else {
     $item_type = trim($_POST['item_type'] ?? '');
     $item_name = trim($_POST['item_name'] ?? '');
     $quantity = $_POST['quantity'] ?? '';
     $total_sales = $_POST['total_sales'] ?? '';
+    $unit_price = $_POST['unit_price'] ?? '';
     $unit = trim($_POST['unit'] ?? '');
     $report_date = trim($_POST['report_date'] ?? '');
     $order_date = trim($_POST['order_date'] ?? '');
@@ -19,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $quantity = is_numeric($quantity) ? (float)$quantity : null;
     $total_sales = ($total_sales === '' ? 0 : (is_numeric($total_sales) ? (float)$total_sales : null));
+    $unit_price = ($unit_price === '' ? null : (is_numeric($unit_price) ? (float)$unit_price : null));
 
     $reportDateValid = DateTime::createFromFormat('Y-m-d', $report_date) !== false;
     $orderDateValid = DateTime::createFromFormat('Y-m-d', $order_date) !== false;
@@ -31,11 +37,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "❗ Invalid unit selected.";
     } elseif ($quantity === null || $quantity <= 0) {
         $error = "❗ Quantity must be a positive number.";
-    } elseif ($total_sales === null || $total_sales < 0) {
-        $error = "❗ Total sales must be 0 or a positive number.";
+    } elseif ($total_sales === null && $unit_price === null) {
+        $error = "❗ Provide either Total sales or Unit price.";
     } elseif (!$reportDateValid || !$orderDateValid) {
         $error = "❗ Dates must be valid (YYYY-MM-DD).";
     } else {
+        // Auto-calc missing field
+        if ($total_sales === null && $unit_price !== null) {
+            $total_sales = $unit_price * $quantity;
+        }
+        if ($total_sales !== null && $unit_price === null && $quantity > 0) {
+            $unit_price = $total_sales / $quantity;
+        }
         try {
             $stmt = $pdo->prepare("INSERT INTO DailyReport (item_type, item_name, quantity, total_sales, unit, report_date, order_date)
                                    VALUES (:item_type, :item_name, :quantity, :total_sales, :unit, :report_date, :order_date)");
@@ -48,10 +61,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':report_date' => $report_date,
                 ':order_date' => $order_date,
             ]);
-            $success = "✅ Report inserted successfully.";
+            $success = "✅ Report inserted successfully. Unit price: Rs " . number_format($unit_price, 2);
         } catch (Exception $e) {
             $error = "❌ Error: " . $e->getMessage();
         }
+    }
     }
 }
 ?>
@@ -148,6 +162,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
 
     <form method="post">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
         <label for="item_type">Item Type</label>
         <select name="item_type" id="item_type" required>
             <option value="">-- Select Type --</option>
@@ -161,8 +176,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label for="quantity">Quantity</label>
         <input type="number" step="0.01" name="quantity" id="quantity" required>
 
-        <label for="total_sales">Total Sales (Rs)</label>
-        <input type="number" step="0.01" name="total_sales" id="total_sales">
+        <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+            <div style="flex:1; min-width:200px;">
+                <label for="total_sales">Total Sales (Rs)</label>
+                <input type="number" step="0.01" name="total_sales" id="total_sales">
+            </div>
+            <div style="flex:1; min-width:200px;">
+                <label for="unit_price">Unit Price (Rs)</label>
+                <input type="number" step="0.01" name="unit_price" id="unit_price" placeholder="Optional; auto-calculated">
+            </div>
+        </div>
 
         <label for="unit">Unit</label>
         <select name="unit" id="unit" required>

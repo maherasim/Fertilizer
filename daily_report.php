@@ -35,9 +35,23 @@ if ($where) {
 }
 
 // Fetch filtered reports
-$sql = 'SELECT * ' . $sqlBase . ' ORDER BY report_date DESC';
+// Pagination
+$page = isset($_GET['page']) && ctype_digit($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$pageSize = 20;
+$offset = ($page - 1) * $pageSize;
+
+// Count total
+$countStmt = $pdo->prepare('SELECT COUNT(*) ' . $sqlBase);
+$countStmt->execute($params);
+$totalRows = (int)$countStmt->fetchColumn();
+$totalPages = max(1, (int)ceil($totalRows / $pageSize));
+
+$sql = 'SELECT * ' . $sqlBase . ' ORDER BY report_date DESC, id DESC LIMIT :limit OFFSET :offset';
 $stmt = $pdo->prepare($sql);
-$stmt->execute($params);
+foreach ($params as $k => $v) { $stmt->bindValue($k, $v); }
+$stmt->bindValue(':limit', $pageSize, PDO::PARAM_INT);
+$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+$stmt->execute();
 $reports = $stmt->fetchAll();
 
 // CSV export
@@ -214,6 +228,17 @@ $topPesticide = $topPesticideStmt->fetch();
         </form>
 
         <?php if (count($reports)): ?>
+            <div class="summary" style="margin-top:10px;">
+                <?php
+                $sumQty = 0.0; $sumSales = 0.0; $countRows = 0;
+                foreach ($reports as $r) { $sumQty += (float)$r['quantity']; $sumSales += (float)$r['total_sales']; $countRows++; }
+                $avgUnitPrice = ($sumQty > 0) ? ($sumSales / $sumQty) : 0;
+                ?>
+                <p><strong>Records:</strong> <?= number_format($countRows) ?>,
+                   <strong>Total Qty:</strong> <?= number_format($sumQty, 2) ?>,
+                   <strong>Total Sales:</strong> Rs <?= number_format($sumSales, 2) ?>,
+                   <strong>Avg Unit Price:</strong> Rs <?= number_format($avgUnitPrice, 2) ?></p>
+            </div>
             <table>
                 <thead>
                     <tr>
@@ -247,7 +272,8 @@ $topPesticide = $topPesticideStmt->fetch();
 
             <div class="total-summary">
                 Total Quantity: <?= number_format($totalQty, 2) ?> |
-                Total Sales: Rs <?= number_format($totalSales, 2) ?>
+                Total Sales: Rs <?= number_format($totalSales, 2) ?> |
+                Page <?= $page ?> of <?= $totalPages ?> (<?= number_format($totalRows) ?> rows)
             </div>
 
             <div class="summary">
@@ -258,6 +284,20 @@ $topPesticide = $topPesticideStmt->fetch();
                 <p><strong>Top Pesticide:</strong> 
                     <?= $topPesticide ? htmlspecialchars($topPesticide['item_name']) . ' (Rs ' . number_format($topPesticide['total'], 2) . ')' : 'N/A' ?>
                 </p>
+                <canvas id="salesChart" width="400" height="160" style="margin-top:10px;"></canvas>
+            </div>
+
+            <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:10px;">
+                <?php
+                $baseQuery = $_GET; unset($baseQuery['page']);
+                $buildUrl = function($p) use ($baseQuery){ return '?' . http_build_query(array_merge($baseQuery, ['page' => $p])); };
+                ?>
+                <?php if ($page > 1): ?>
+                    <a href="<?= $buildUrl($page - 1) ?>" style="padding:8px 12px; background:#e8f5ec; border:1px solid #cfe8d5; border-radius:6px; text-decoration:none; color:#1c3b2c;">Prev</a>
+                <?php endif; ?>
+                <?php if ($page < $totalPages): ?>
+                    <a href="<?= $buildUrl($page + 1) ?>" style="padding:8px 12px; background:#e8f5ec; border:1px solid #cfe8d5; border-radius:6px; text-decoration:none; color:#1c3b2c;">Next</a>
+                <?php endif; ?>
             </div>
 
         <?php else: ?>
@@ -266,5 +306,29 @@ $topPesticide = $topPesticideStmt->fetch();
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+// Prepare small chart data grouped by date (server-rendered dataset)
+(function(){
+    const rows = <?= json_encode(array_map(function($row){
+        return [
+            'date' => date('Y-m-d', strtotime($row['report_date'])),
+            'sales' => (float)$row['total_sales']
+        ];
+    }, $reports)) ?>;
+    const map = new Map();
+    rows.forEach(r => { map.set(r.date, (map.get(r.date) || 0) + r.sales); });
+    const labels = Array.from(map.keys()).sort();
+    const data = labels.map(d => map.get(d));
+    const ctx = document.getElementById('salesChart');
+    if (ctx && labels.length) {
+        new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets: [{ label: 'Total Sales (Rs)', data, borderColor: '#28a745', tension: 0.2 }] },
+            options: { plugins: { legend: { display: true } }, scales: { y: { beginAtZero: true } } }
+        });
+    }
+})();
+</script>
 </body>
 </html>
