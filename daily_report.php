@@ -1,18 +1,94 @@
 <?php
-$pdo = new PDO("mysql:host=localhost;dbname=fertilizer", "root", "");
-$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+require_once __DIR__ . '/config.php';
 
-// Fetch ALL reports (no date filter)
-$stmt = $pdo->prepare("SELECT * FROM DailyReport ORDER BY report_date DESC");
-$stmt->execute();
+// Filters
+$startDate = isset($_GET['start_date']) ? trim($_GET['start_date']) : '';
+$endDate = isset($_GET['end_date']) ? trim($_GET['end_date']) : '';
+$itemType = isset($_GET['item_type']) ? trim($_GET['item_type']) : '';
+$export = isset($_GET['export']) ? $_GET['export'] : '';
+
+$validTypes = ['', 'fertilizer', 'pesticide'];
+if (!in_array($itemType, $validTypes, true)) {
+    $itemType = '';
+}
+
+// Build WHERE clause
+$where = [];
+$params = [];
+
+if ($startDate !== '') {
+    $where[] = 'report_date >= :start_date';
+    $params[':start_date'] = $startDate;
+}
+if ($endDate !== '') {
+    $where[] = 'report_date <= :end_date';
+    $params[':end_date'] = $endDate;
+}
+if ($itemType !== '') {
+    $where[] = 'item_type = :item_type';
+    $params[':item_type'] = $itemType;
+}
+
+$sqlBase = 'FROM DailyReport';
+if ($where) {
+    $sqlBase .= ' WHERE ' . implode(' AND ', $where);
+}
+
+// Fetch filtered reports
+$sql = 'SELECT * ' . $sqlBase . ' ORDER BY report_date DESC';
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
 $reports = $stmt->fetchAll();
 
-// Top fertilizer
-$topFertilizerStmt = $pdo->query("SELECT item_name, SUM(total_sales) as total FROM DailyReport WHERE item_type = 'fertilizer' GROUP BY item_name ORDER BY total DESC LIMIT 1");
+// CSV export
+if ($export === 'csv') {
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="daily_report.csv"');
+    $out = fopen('php://output', 'w');
+    fputcsv($out, ['Type', 'Item', 'Quantity', 'Unit', 'Total Sales (Rs)', 'Report Date', 'Order Date']);
+    foreach ($reports as $row) {
+        fputcsv($out, [
+            $row['item_type'],
+            $row['item_name'],
+            number_format((float)$row['quantity'], 2, '.', ''),
+            $row['unit'],
+            number_format((float)$row['total_sales'], 2, '.', ''),
+            $row['report_date'],
+            $row['order_date'],
+        ]);
+    }
+    fclose($out);
+    exit;
+}
+
+// Top fertilizer and pesticide within date range (ignores item_type filter to always show both)
+$dateWhere = [];
+$dateParams = [];
+if ($startDate !== '') {
+    $dateWhere[] = 'report_date >= :start_date';
+    $dateParams[':start_date'] = $startDate;
+}
+if ($endDate !== '') {
+    $dateWhere[] = 'report_date <= :end_date';
+    $dateParams[':end_date'] = $endDate;
+}
+
+$fertSql = "SELECT item_name, SUM(total_sales) as total FROM DailyReport WHERE item_type = 'fertilizer'";
+if ($dateWhere) {
+    $fertSql .= ' AND ' . implode(' AND ', $dateWhere);
+}
+$fertSql .= ' GROUP BY item_name ORDER BY total DESC LIMIT 1';
+$topFertilizerStmt = $pdo->prepare($fertSql);
+$topFertilizerStmt->execute($dateParams);
 $topFertilizer = $topFertilizerStmt->fetch();
 
-// Top pesticide
-$topPesticideStmt = $pdo->query("SELECT item_name, SUM(total_sales) as total FROM DailyReport WHERE item_type = 'pesticide' GROUP BY item_name ORDER BY total DESC LIMIT 1");
+$pestSql = "SELECT item_name, SUM(total_sales) as total FROM DailyReport WHERE item_type = 'pesticide'";
+if ($dateWhere) {
+    $pestSql .= ' AND ' . implode(' AND ', $dateWhere);
+}
+$pestSql .= ' GROUP BY item_name ORDER BY total DESC LIMIT 1';
+$topPesticideStmt = $pdo->prepare($pestSql);
+$topPesticideStmt->execute($dateParams);
 $topPesticide = $topPesticideStmt->fetch();
 ?>
 
@@ -111,6 +187,31 @@ $topPesticide = $topPesticideStmt->fetch();
             <h1>🌾 All Sales Report</h1>
             <div class="date"><?= date('l, d M Y') ?></div>
         </div>
+
+        <form method="get" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+            <div>
+                <label for="start_date" style="display:block; font-weight:600; color:#2d4739;">Start date</label>
+                <input type="date" id="start_date" name="start_date" value="<?= htmlspecialchars($startDate) ?>" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+            </div>
+            <div>
+                <label for="end_date" style="display:block; font-weight:600; color:#2d4739;">End date</label>
+                <input type="date" id="end_date" name="end_date" value="<?= htmlspecialchars($endDate) ?>" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+            </div>
+            <div>
+                <label for="item_type" style="display:block; font-weight:600; color:#2d4739;">Type</label>
+                <select id="item_type" name="item_type" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+                    <option value="" <?= $itemType === '' ? 'selected' : '' ?>>All</option>
+                    <option value="fertilizer" <?= $itemType === 'fertilizer' ? 'selected' : '' ?>>Fertilizer</option>
+                    <option value="pesticide" <?= $itemType === 'pesticide' ? 'selected' : '' ?>>Pesticide</option>
+                </select>
+            </div>
+            <div>
+                <button type="submit" style="background:#28a745; color:#fff; border:none; padding:10px 16px; border-radius:6px; cursor:pointer;">Filter</button>
+            </div>
+            <div>
+                <a href="?<?= http_build_query(array_merge($_GET, ['export' => 'csv'])) ?>" style="background:#1d6f42; color:#fff; padding:10px 16px; border-radius:6px; text-decoration:none;">Export CSV</a>
+            </div>
+        </form>
 
         <?php if (count($reports)): ?>
             <table>

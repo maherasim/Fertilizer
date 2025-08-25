@@ -62,6 +62,8 @@
                 <li class="nav-item"><a class="nav-link" href="pesticide.php">Pesticides</a></li>
                 <li class="nav-item"><a class="nav-link" href="planting.php">Planting</a></li>
                 <li class="nav-item"><a class="nav-link" href="market.php">Market Rates</a></li>
+                <li class="nav-item"><a class="nav-link" href="daily_report.php">Daily Reports</a></li>
+                <li class="nav-item"><a class="nav-link" href="create_daily_report.php">New Report</a></li>
             </ul>
         </div>
     </div>

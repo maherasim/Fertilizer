@@ -1,30 +1,57 @@
 <?php
-$pdo = new PDO("mysql:host=localhost;dbname=fertilizer", "root", "");
-$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+require_once __DIR__ . '/config.php';
 
 $success = "";
 $error = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $item_type = $_POST['item_type'] ?? '';
-    $item_name = $_POST['item_name'] ?? '';
-    $quantity = floatval($_POST['quantity'] ?? 0);
-    $total_sales = floatval($_POST['total_sales'] ?? 0);
-    $unit = $_POST['unit'] ?? '';
-    $report_date = $_POST['report_date'] ?? '';
-    $order_date = $_POST['order_date'] ?? '';
+    $item_type = trim($_POST['item_type'] ?? '');
+    $item_name = trim($_POST['item_name'] ?? '');
+    $quantity = $_POST['quantity'] ?? '';
+    $total_sales = $_POST['total_sales'] ?? '';
+    $unit = trim($_POST['unit'] ?? '');
+    $report_date = trim($_POST['report_date'] ?? '');
+    $order_date = trim($_POST['order_date'] ?? '');
 
-    if ($item_type && $item_name && $quantity && $unit && $report_date && $order_date) {
+    // Validation
+    $validTypes = ['fertilizer', 'pesticide'];
+    $validUnits = ['kg', 'ltr', 'gm', 'ml'];
+
+    $quantity = is_numeric($quantity) ? (float)$quantity : null;
+    $total_sales = ($total_sales === '' ? 0 : (is_numeric($total_sales) ? (float)$total_sales : null));
+
+    $reportDateValid = DateTime::createFromFormat('Y-m-d', $report_date) !== false;
+    $orderDateValid = DateTime::createFromFormat('Y-m-d', $order_date) !== false;
+
+    if (!in_array($item_type, $validTypes, true)) {
+        $error = "❗ Invalid item type.";
+    } elseif ($item_name === '') {
+        $error = "❗ Item name is required.";
+    } elseif (!in_array($unit, $validUnits, true)) {
+        $error = "❗ Invalid unit selected.";
+    } elseif ($quantity === null || $quantity <= 0) {
+        $error = "❗ Quantity must be a positive number.";
+    } elseif ($total_sales === null || $total_sales < 0) {
+        $error = "❗ Total sales must be 0 or a positive number.";
+    } elseif (!$reportDateValid || !$orderDateValid) {
+        $error = "❗ Dates must be valid (YYYY-MM-DD).";
+    } else {
         try {
             $stmt = $pdo->prepare("INSERT INTO DailyReport (item_type, item_name, quantity, total_sales, unit, report_date, order_date)
-                                   VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$item_type, $item_name, $quantity, $total_sales, $unit, $report_date, $order_date]);
+                                   VALUES (:item_type, :item_name, :quantity, :total_sales, :unit, :report_date, :order_date)");
+            $stmt->execute([
+                ':item_type' => $item_type,
+                ':item_name' => $item_name,
+                ':quantity' => $quantity,
+                ':total_sales' => $total_sales,
+                ':unit' => $unit,
+                ':report_date' => $report_date,
+                ':order_date' => $order_date,
+            ]);
             $success = "✅ Report inserted successfully.";
         } catch (Exception $e) {
             $error = "❌ Error: " . $e->getMessage();
         }
-    } else {
-        $error = "❗ Please fill in all required fields.";
     }
 }
 ?>
