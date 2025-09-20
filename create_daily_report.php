@@ -10,7 +10,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "❌ Invalid form submission. Please try again.";
     } else {
     $item_type = trim($_POST['item_type'] ?? '');
-    $item_name = trim($_POST['item_name'] ?? '');
+    $item_id = isset($_POST['item_id']) && ctype_digit((string)$_POST['item_id']) ? (int)$_POST['item_id'] : 0;
+    $item_name = trim($_POST['item_name'] ?? ''); // may be auto-filled from DB
     $customer_name = trim($_POST['customer_name'] ?? '');
     $quantity = $_POST['quantity'] ?? '';
     $total_sales = $_POST['total_sales'] ?? '';
@@ -32,8 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!in_array($item_type, $validTypes, true)) {
         $error = "❗ Invalid item type.";
-    } elseif ($item_name === '') {
-        $error = "❗ Item name is required.";
+    } elseif ($item_id <= 0) {
+        $error = "❗ Please select a valid item.";
     } elseif (!in_array($unit, $validUnits, true)) {
         $error = "❗ Invalid unit selected.";
     } elseif ($quantity === null || $quantity <= 0) {
@@ -51,20 +52,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $unit_price = $total_sales / $quantity;
         }
         try {
-            $stmt = $pdo->prepare("INSERT INTO DailyReport (item_type, item_name, customer_name, quantity, total_sales, unit, report_date, order_date)
-                                   VALUES (:item_type, :item_name, :customer_name, :quantity, :total_sales, :unit, :report_date, :order_date)");
-            $stmt->execute([
-                ':item_type' => $item_type,
-                ':item_name' => $item_name,
-                ':customer_name' => $customer_name,
-                ':quantity' => $quantity,
-                ':total_sales' => $total_sales,
-                ':unit' => $unit,
-                ':report_date' => $report_date,
-                ':order_date' => $order_date,
-            ]);
-            $success = "✅ Report inserted successfully. Unit price: Rs " . number_format($unit_price, 2);
+            $pdo->beginTransaction();
+
+            // Fetch selected item to validate stock and get authoritative name/unit
+            if ($item_type === 'fertilizer') {
+                $it = $pdo->prepare("SELECT FertilizerID AS id, FertilizerName AS name, COALESCE(StockQuantity,0) AS stock_quantity, COALESCE(Unit,'') AS db_unit FROM Fertilizer WHERE FertilizerID = :id");
+            } else {
+                $it = $pdo->prepare("SELECT PesticideID AS id, PesticideName AS name, COALESCE(StockQuantity,0) AS stock_quantity, COALESCE(Unit,'') AS db_unit FROM Pesticide WHERE PesticideID = :id");
+            }
+            $it->execute([':id' => $item_id]);
+            $itemRow = $it->fetch();
+            if (!$itemRow) {
+                throw new Exception('Selected item not found.');
+            }
+
+            // Use DB unit and name to avoid tampering
+            $item_name = $itemRow['name'];
+            $dbUnit = $itemRow['db_unit'];
+            if ($dbUnit && in_array($dbUnit, $validUnits, true)) {
+                $unit = $dbUnit;
+            }
+            if (!in_array($unit, $validUnits, true)) {
+                throw new Exception('Item has invalid unit configuration.');
+            }
+            if ($quantity > (float)$itemRow['stock_quantity']) {
+                throw new Exception('Insufficient stock. Available: ' . number_format((float)$itemRow['stock_quantity'], 2));
+            }
+
+            // Optional item_id column handling
+            $hasItemId = false;
+            try {
+                $colStmt = $pdo->query("SHOW COLUMNS FROM DailyReport LIKE 'item_id'");
+                $hasItemId = (bool)$colStmt->fetch();
+            } catch (Throwable $e) { /* ignore */ }
+
+            if ($hasItemId) {
+                $stmt = $pdo->prepare("INSERT INTO DailyReport (item_type, item_id, item_name, customer_name, quantity, total_sales, unit, report_date, order_date)
+                                       VALUES (:item_type, :item_id, :item_name, :customer_name, :quantity, :total_sales, :unit, :report_date, :order_date)");
+                $stmt->execute([
+                    ':item_type' => $item_type,
+                    ':item_id' => $item_id,
+                    ':item_name' => $item_name,
+                    ':customer_name' => $customer_name,
+                    ':quantity' => $quantity,
+                    ':total_sales' => $total_sales,
+                    ':unit' => $unit,
+                    ':report_date' => $report_date,
+                    ':order_date' => $order_date,
+                ]);
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO DailyReport (item_type, item_name, customer_name, quantity, total_sales, unit, report_date, order_date)
+                                       VALUES (:item_type, :item_name, :customer_name, :quantity, :total_sales, :unit, :report_date, :order_date)");
+                $stmt->execute([
+                    ':item_type' => $item_type,
+                    ':item_name' => $item_name,
+                    ':customer_name' => $customer_name,
+                    ':quantity' => $quantity,
+                    ':total_sales' => $total_sales,
+                    ':unit' => $unit,
+                    ':report_date' => $report_date,
+                    ':order_date' => $order_date,
+                ]);
+            }
+
+            // Deduct stock atomically, prevent negative
+            if ($item_type === 'fertilizer') {
+                $upd = $pdo->prepare("UPDATE Fertilizer SET StockQuantity = StockQuantity - :q WHERE FertilizerID = :id AND StockQuantity >= :q");
+            } else {
+                $upd = $pdo->prepare("UPDATE Pesticide SET StockQuantity = StockQuantity - :q WHERE PesticideID = :id AND StockQuantity >= :q");
+            }
+            $upd->execute([':q' => $quantity, ':id' => $item_id]);
+            if ($upd->rowCount() !== 1) {
+                throw new Exception('Failed to update stock. Try again.');
+            }
+
+            $newId = (int)$pdo->lastInsertId();
+            $pdo->commit();
+            $success = "✅ Report inserted and stock updated. Unit price: Rs " . number_format($unit_price, 2) . 
+                        " — <a href=\"invoice.php?id=" . $newId . "\" style=\"color:#007bff;\">View Invoice</a>";
         } catch (Exception $e) {
+            if ($pdo->inTransaction()) { $pdo->rollBack(); }
             $error = "❌ Error: " . $e->getMessage();
         }
     }
@@ -163,7 +230,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="message error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <form method="post">
+    <form method="post" id="reportForm">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
         <label for="customer_name">Customer  Name</label>
         <input type="text" name="customer_name" id="customer_name" required>
@@ -174,8 +241,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <option value="pesticide">Pesticide</option>
         </select>
 
-        <label for="item_name">Item Name</label>
-        <input type="text" name="item_name" id="item_name" required>
+        <label for="item_id">Item</label>
+        <select name="item_id" id="item_id" required disabled>
+            <option value="">-- Select Item --</option>
+        </select>
+        <input type="hidden" name="item_name" id="item_name">
+        <div id="stockInfo" style="margin-top:6px; color:#1b3e29; font-size:14px;"></div>
 
         <label for="quantity">Quantity</label>
         <input type="number" step="0.01" name="quantity" id="quantity" required>
@@ -192,7 +263,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <label for="unit">Unit</label>
-        <select name="unit" id="unit" required>
+        <select name="unit" id="unit" required disabled>
             <option value="">-- Select Unit --</option>
             <option value="kg">kg</option>
             <option value="ltr">ltr</option>
@@ -213,6 +284,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <a href="daily_report.php">← Back to Report</a>
     </div>
 </div>
+
+<script>
+// Dependent dropdowns and live stock display
+(function(){
+    const typeEl = document.getElementById('item_type');
+    const itemEl = document.getElementById('item_id');
+    const nameEl = document.getElementById('item_name');
+    const unitEl = document.getElementById('unit');
+    const qtyEl = document.getElementById('quantity');
+    const stockInfo = document.getElementById('stockInfo');
+    let items = [];
+
+    function setUnit(u){
+        for (const opt of unitEl.options) { opt.selected = (opt.value === u); }
+    }
+
+    function clearItems(){
+        itemEl.innerHTML = '<option value="">-- Select Item --</option>';
+        itemEl.disabled = true;
+        stockInfo.textContent = '';
+        nameEl.value = '';
+        setUnit('');
+        unitEl.disabled = true;
+    }
+
+    typeEl.addEventListener('change', async function(){
+        clearItems();
+        const t = typeEl.value;
+        if (!t) return;
+        try {
+            const res = await fetch('api_items.php?type=' + encodeURIComponent(t));
+            const data = await res.json();
+            items = Array.isArray(data.items) ? data.items : [];
+            items.forEach(it => {
+                const o = document.createElement('option');
+                o.value = String(it.id);
+                o.textContent = it.name;
+                o.dataset.unit = it.unit || '';
+                o.dataset.stock = (typeof it.stock_quantity !== 'undefined') ? it.stock_quantity : 0;
+                itemEl.appendChild(o);
+            });
+            itemEl.disabled = items.length === 0;
+        } catch (e) {
+            console.error(e);
+        }
+    });
+
+    itemEl.addEventListener('change', function(){
+        const opt = itemEl.options[itemEl.selectedIndex];
+        const unit = opt ? (opt.dataset.unit || '') : '';
+        const stock = opt ? Number(opt.dataset.stock || 0) : 0;
+        nameEl.value = opt ? opt.textContent : '';
+        setUnit(unit);
+        unitEl.disabled = false; // keep locked value but allow form to submit
+        stockInfo.textContent = opt && opt.value ? ('Available stock: ' + stock.toFixed(2) + ' ' + (unit || '')) : '';
+    });
+
+    // Client-side guard: quantity not exceed stock
+    qtyEl.addEventListener('input', function(){
+        const opt = itemEl.options[itemEl.selectedIndex];
+        const stock = opt ? Number(opt.dataset.stock || 0) : 0;
+        const q = Number(qtyEl.value || 0);
+        if (q > stock && stock > 0) {
+            qtyEl.setCustomValidity('Quantity exceeds available stock');
+        } else {
+            qtyEl.setCustomValidity('');
+        }
+    });
+})();
+</script>
 
 </body>
 </html>

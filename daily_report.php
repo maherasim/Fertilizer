@@ -244,10 +244,12 @@ $topPesticide = $topPesticideStmt->fetch();
                     <tr>
                         <th>Type</th>
                         <th>Item</th>
+                        <th>Customer</th>
                         <th>Quantity</th>
                         <th>Unit</th>
                         <th>Total Sales (Rs)</th>
                         <th>Date</th>
+                        <th>Invoice</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -261,10 +263,12 @@ $topPesticide = $topPesticideStmt->fetch();
                         <tr>
                             <td><?= htmlspecialchars($row['item_type']) ?></td>
                             <td><?= htmlspecialchars($row['item_name']) ?></td>
+                            <td><?= htmlspecialchars($row['customer_name'] ?? '') ?></td>
                             <td><?= number_format($row['quantity'], 2) ?></td>
                             <td><?= htmlspecialchars($row['unit']) ?></td>
                             <td><?= number_format($row['total_sales'], 2) ?></td>
                             <td><?= date('d-m-Y', strtotime($row['report_date'])) ?></td>
+                            <td><a href="invoice.php?id=<?= urlencode((string)$row['id']) ?>" style="color:#007bff; text-decoration:none;">View</a></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
