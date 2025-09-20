@@ -122,7 +122,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $pdo->commit();
             $invoiceId = $newId > 0 ? $newId : 0;
-            $success = "✅ Report inserted and stock updated. Unit price: Rs " . number_format($unit_price ?? 0, 2) .
+            $remaining = max(0, ($total_sales ?? 0) - ($paid_amount ?? 0));
+            $remainingText = ($payment_status === 'partial' || $remaining > 0)
+                ? " — Remaining: Rs " . number_format($remaining, 2)
+                : '';
+            $success = "✅ Report inserted and stock updated. Unit price: Rs " . number_format($unit_price ?? 0, 2) . $remainingText .
                         "<script>(function(){try{var a=document.createElement('a');a.href='invoice.php?id=" . $invoiceId . "&download=1';a.download='invoice-" . $invoiceId . ".html';document.body.appendChild(a);a.click();a.remove();}catch(e){console.error(e);}})();</script>";
         } catch (Exception $e) {
             if ($pdo->inTransaction()) { $pdo->rollBack(); }

@@ -123,6 +123,9 @@ $paymentStatus = $row['payment_status'] ?? ($balance <= 0 ? 'paid' : ($paidAmoun
             </table>
             <div class="total">Grand Total: Rs <?= number_format($totalSales, 2) ?></div>
             <div class="total" style="font-weight:600;">Paid: Rs <?= number_format($paidAmount, 2) ?> | Balance: Rs <?= number_format($balance, 2) ?></div>
+            <?php if ($balance > 0): ?>
+                <div class="total" style="color:#b02a37;">Remaining Amount Due: Rs <?= number_format($balance, 2) ?></div>
+            <?php endif; ?>
         </div>
 
         <div class="footer no-print">
