@@ -20,30 +20,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $report_date = trim($_POST['report_date'] ?? '');
     $order_date = trim($_POST['order_date'] ?? '');
 
-    // Validation
-    $validTypes = ['fertilizer', 'pesticide'];
-    $validUnits = ['kg', 'ltr', 'gm', 'ml'];
-
-    $quantity = is_numeric($quantity) ? (float)$quantity : null;
-    $total_sales = ($total_sales === '' ? 0 : (is_numeric($total_sales) ? (float)$total_sales : null));
+    // No restrictions/validations: coerce numeric fields only
+    $quantity = is_numeric($quantity) ? (float)$quantity : 0.0;
+    $total_sales = ($total_sales === '' ? 0.0 : (is_numeric($total_sales) ? (float)$total_sales : 0.0));
     $unit_price = ($unit_price === '' ? null : (is_numeric($unit_price) ? (float)$unit_price : null));
 
-    $reportDateValid = DateTime::createFromFormat('Y-m-d', $report_date) !== false;
-    $orderDateValid = DateTime::createFromFormat('Y-m-d', $order_date) !== false;
-
-    if (!in_array($item_type, $validTypes, true)) {
-        $error = "❗ Invalid item type.";
-    } elseif ($item_id <= 0) {
-        $error = "❗ Please select a valid item.";
-    } elseif (!in_array($unit, $validUnits, true)) {
-        $error = "❗ Invalid unit selected.";
-    } elseif ($quantity === null || $quantity <= 0) {
-        $error = "❗ Quantity must be a positive number.";
-    } elseif ($total_sales === null && $unit_price === null) {
-        $error = "❗ Provide either Total sales or Unit price.";
-    } elseif (!$reportDateValid || !$orderDateValid) {
-        $error = "❗ Dates must be valid (YYYY-MM-DD).";
-    } else {
+    {
         // Auto-calc missing field
         if ($total_sales === null && $unit_price !== null) {
             $total_sales = $unit_price * $quantity;
@@ -66,18 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('Selected item not found.');
             }
 
-            // Use DB unit and name to avoid tampering
+            // Use DB name for consistency; leave unit as user-selected
             $item_name = $itemRow['name'];
-            $dbUnit = $itemRow['db_unit'];
-            if ($dbUnit && in_array($dbUnit, $validUnits, true)) {
-                $unit = $dbUnit;
-            }
-            if (!in_array($unit, $validUnits, true)) {
-                throw new Exception('Item has invalid unit configuration.');
-            }
-            if ($quantity > (float)$itemRow['stock_quantity']) {
-                throw new Exception('Insufficient stock. Available: ' . number_format((float)$itemRow['stock_quantity'], 2));
-            }
 
             // Optional item_id column handling (robust INFORMATION_SCHEMA check)
             $hasItemId = false;
@@ -115,16 +87,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare($sql);
             $stmt->execute($values);
 
-            // Deduct stock atomically, prevent negative
+            // Deduct stock without restriction (may go negative)
             if ($item_type === 'fertilizer') {
-                $upd = $pdo->prepare("UPDATE Fertilizer SET StockQuantity = StockQuantity - :q WHERE FertilizerID = :id AND StockQuantity >= :q");
+                $upd = $pdo->prepare("UPDATE Fertilizer SET StockQuantity = COALESCE(StockQuantity,0) - :q WHERE FertilizerID = :id");
             } else {
-                $upd = $pdo->prepare("UPDATE Pesticide SET StockQuantity = StockQuantity - :q WHERE PesticideID = :id AND StockQuantity >= :q");
+                $upd = $pdo->prepare("UPDATE Pesticide SET StockQuantity = COALESCE(StockQuantity,0) - :q WHERE PesticideID = :id");
             }
             $upd->execute([':q' => $quantity, ':id' => $item_id]);
-            if ($upd->rowCount() !== 1) {
-                throw new Exception('Failed to update stock. Try again.');
-            }
 
             $newId = (int)$pdo->lastInsertId();
             $pdo->commit();
@@ -263,7 +232,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <label for="unit">Unit</label>
-        <select name="unit" id="unit" required disabled>
+        <select name="unit" id="unit" required>
             <option value="">-- Select Unit --</option>
             <option value="kg">kg</option>
             <option value="ltr">ltr</option>
@@ -306,7 +275,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         stockInfo.textContent = '';
         nameEl.value = '';
         setUnit('');
-        unitEl.disabled = true;
+        // keep unit free for user input
     }
 
     typeEl.addEventListener('change', async function(){
@@ -337,21 +306,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const stock = opt ? Number(opt.dataset.stock || 0) : 0;
         nameEl.value = opt ? opt.textContent : '';
         setUnit(unit);
-        unitEl.disabled = false; // keep locked value but allow form to submit
         stockInfo.textContent = opt && opt.value ? ('Available stock: ' + stock.toFixed(2) + ' ' + (unit || '')) : '';
     });
 
-    // Client-side guard: quantity not exceed stock
-    qtyEl.addEventListener('input', function(){
-        const opt = itemEl.options[itemEl.selectedIndex];
-        const stock = opt ? Number(opt.dataset.stock || 0) : 0;
-        const q = Number(qtyEl.value || 0);
-        if (q > stock && stock > 0) {
-            qtyEl.setCustomValidity('Quantity exceeds available stock');
-        } else {
-            qtyEl.setCustomValidity('');
-        }
-    });
+    // No client-side restriction
 })();
 </script>
 
