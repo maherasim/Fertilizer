@@ -308,6 +308,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     const unitEl = document.getElementById('unit');
     const qtyEl = document.getElementById('quantity');
     const stockInfo = document.getElementById('stockInfo');
+    const unitPriceEl = document.getElementById('unit_price');
+    const totalSalesEl = document.getElementById('total_sales');
     let items = [];
 
     function setUnit(u){
@@ -337,6 +339,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 o.textContent = it.name;
                 o.dataset.unit = it.unit || '';
                 o.dataset.stock = (typeof it.stock_quantity !== 'undefined') ? it.stock_quantity : 0;
+                if (typeof it.sale_price !== 'undefined' && it.sale_price !== null) {
+                    o.dataset.price = it.sale_price;
+                }
                 itemEl.appendChild(o);
             });
             itemEl.disabled = items.length === 0;
@@ -352,9 +357,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         nameEl.value = opt ? opt.textContent : '';
         setUnit(unit);
         stockInfo.textContent = opt && opt.value ? ('Available stock: ' + stock.toFixed(2) + ' ' + (unit || '')) : '';
+        // Autofill unit price from item sale price, if available
+        const price = opt && opt.dataset.price ? Number(opt.dataset.price) : null;
+        if (price !== null && !Number.isNaN(price)) {
+            unitPriceEl.value = price.toFixed(2);
+            // Recompute total on selection
+            const q = Number(qtyEl.value || 0);
+            if (q > 0) totalSalesEl.value = (q * price).toFixed(2);
+        }
     });
 
-    // No client-side restriction
+    // Auto-calc total when quantity or unit price changes
+    function recalc(){
+        const q = Number(qtyEl.value || 0);
+        const p = Number(unitPriceEl.value || 0);
+        if (!Number.isNaN(q) && !Number.isNaN(p)) {
+            totalSalesEl.value = (q * p).toFixed(2);
+        }
+    }
+    qtyEl.addEventListener('input', recalc);
+    unitPriceEl.addEventListener('input', recalc);
 })();
 </script>
 

@@ -92,6 +92,7 @@ foreach ($rows as $r) { $sumQty += (float)$r['quantity']; $sumSales += (float)$r
                         <th>Item</th>
                         <th>Customer</th>
                         <th>Qty</th>
+                        <th>Unit Price (Rs)</th>
                         <th>Unit</th>
                         <th>Total (Rs)</th>
                         <th>Paid (Rs)</th>
@@ -106,6 +107,8 @@ foreach ($rows as $r) { $sumQty += (float)$r['quantity']; $sumSales += (float)$r
                         <td><?= htmlspecialchars($row['item_name']) ?></td>
                         <td><?= htmlspecialchars($row['customer_name'] ?? '') ?></td>
                         <td><?= number_format((float)$row['quantity'], 2) ?></td>
+                        <?php $u = ((float)$row['quantity'] > 0) ? ((float)$row['total_sales'] / (float)$row['quantity']) : 0; ?>
+                        <td><?= number_format($u, 2) ?></td>
                         <td><?= htmlspecialchars($row['unit']) ?></td>
                         <td><?= number_format((float)$row['total_sales'], 2) ?></td>
                         <td><?= number_format($paidAmt, 2) ?></td>

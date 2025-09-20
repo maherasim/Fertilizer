@@ -13,15 +13,17 @@ if (!in_array($type, $validTypes, true)) {
 
 try {
     if ($type === 'fertilizer') {
-        // Columns StockQuantity, Unit are expected. If missing, default to 0 and empty.
+        // Columns StockQuantity, Unit, SalePrice are optional; default accordingly.
         $stmt = $pdo->query("SELECT FertilizerID AS id, FertilizerName AS name, 
                                     COALESCE(StockQuantity, 0) AS stock_quantity, 
-                                    COALESCE(Unit, '') AS unit
+                                    COALESCE(Unit, '') AS unit,
+                                    SalePrice AS sale_price
                              FROM Fertilizer ORDER BY FertilizerName ASC");
     } else {
         $stmt = $pdo->query("SELECT PesticideID AS id, PesticideName AS name, 
                                     COALESCE(StockQuantity, 0) AS stock_quantity, 
-                                    COALESCE(Unit, '') AS unit
+                                    COALESCE(Unit, '') AS unit,
+                                    SalePrice AS sale_price
                              FROM Pesticide ORDER BY PesticideName ASC");
     }
     $items = $stmt->fetchAll();
