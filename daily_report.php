@@ -225,6 +225,10 @@ $topPesticide = $topPesticideStmt->fetch();
             <div>
                 <a href="?<?= http_build_query(array_merge($_GET, ['export' => 'csv'])) ?>" style="background:#1d6f42; color:#fff; padding:10px 16px; border-radius:6px; text-decoration:none;">Export CSV</a>
             </div>
+            <div>
+                <?php $printUrl = 'daily_report_print.php?' . http_build_query(['start_date' => $startDate, 'end_date' => $endDate, 'item_type' => $itemType]); ?>
+                <a href="<?= $printUrl ?>" style="background:#0b5ed7; color:#fff; padding:10px 16px; border-radius:6px; text-decoration:none;">Print / PDF</a>
+            </div>
         </form>
 
         <?php if (count($reports)): ?>
