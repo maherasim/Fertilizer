@@ -94,10 +94,12 @@ foreach ($rows as $r) { $sumQty += (float)$r['quantity']; $sumSales += (float)$r
                         <th>Qty</th>
                         <th>Unit</th>
                         <th>Total (Rs)</th>
+                        <th>Paid (Rs)</th>
+                        <th>Balance (Rs)</th>
                     </tr>
                 </thead>
                 <tbody>
-                <?php foreach ($rows as $row): ?>
+                <?php foreach ($rows as $row): $paidAmt = isset($row['paid_amount']) ? (float)$row['paid_amount'] : 0.0; $bal = max(0, ((float)$row['total_sales']) - $paidAmt); ?>
                     <tr>
                         <td><?= htmlspecialchars(date('Y-m-d', strtotime($row['report_date']))) ?></td>
                         <td><?= htmlspecialchars($row['item_type']) ?></td>
@@ -106,6 +108,8 @@ foreach ($rows as $r) { $sumQty += (float)$r['quantity']; $sumSales += (float)$r
                         <td><?= number_format((float)$row['quantity'], 2) ?></td>
                         <td><?= htmlspecialchars($row['unit']) ?></td>
                         <td><?= number_format((float)$row['total_sales'], 2) ?></td>
+                        <td><?= number_format($paidAmt, 2) ?></td>
+                        <td><?= number_format($bal, 2) ?></td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>

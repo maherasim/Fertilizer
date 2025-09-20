@@ -252,6 +252,8 @@ $topPesticide = $topPesticideStmt->fetch();
                         <th>Quantity</th>
                         <th>Unit</th>
                         <th>Total Sales (Rs)</th>
+                        <th>Paid</th>
+                        <th>Balance</th>
                         <th>Date</th>
                         <th>Invoice</th>
                     </tr>
@@ -271,6 +273,9 @@ $topPesticide = $topPesticideStmt->fetch();
                             <td><?= number_format($row['quantity'], 2) ?></td>
                             <td><?= htmlspecialchars($row['unit']) ?></td>
                             <td><?= number_format($row['total_sales'], 2) ?></td>
+                            <?php $paidAmt = isset($row['paid_amount']) ? (float)$row['paid_amount'] : 0.0; $bal = max(0, ((float)$row['total_sales']) - $paidAmt); ?>
+                            <td><?= number_format($paidAmt, 2) ?></td>
+                            <td><?= number_format($bal, 2) ?></td>
                             <td><?= date('d-m-Y', strtotime($row['report_date'])) ?></td>
                             <td><a href="invoice.php?id=<?= urlencode((string)$row['id']) ?>" style="color:#007bff; text-decoration:none;">View</a></td>
                         </tr>

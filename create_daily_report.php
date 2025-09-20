@@ -19,11 +19,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $unit = trim($_POST['unit'] ?? '');
     $report_date = trim($_POST['report_date'] ?? '');
     $order_date = trim($_POST['order_date'] ?? '');
+    $paid_amount = $_POST['paid_amount'] ?? '';
+    $payment_status = trim($_POST['payment_status'] ?? '');
 
     // No restrictions/validations: coerce numeric fields only
     $quantity = is_numeric($quantity) ? (float)$quantity : 0.0;
     $total_sales = ($total_sales === '' ? 0.0 : (is_numeric($total_sales) ? (float)$total_sales : 0.0));
     $unit_price = ($unit_price === '' ? null : (is_numeric($unit_price) ? (float)$unit_price : null));
+    $paid_amount = ($paid_amount === '' ? 0.0 : (is_numeric($paid_amount) ? (float)$paid_amount : 0.0));
 
     {
         // Auto-calc missing field
@@ -67,6 +70,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($hasItemId) {
                 array_splice($columns, 1, 0, 'item_id'); // after item_type
             }
+            // Detect optional payment columns
+            $hasPaid = false; $hasStatus = false;
+            try {
+                $dbNameStmt2 = $pdo->query('SELECT DATABASE()');
+                $currentDb2 = (string)$dbNameStmt2->fetchColumn();
+                $meta2 = $pdo->prepare("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'DailyReport' AND COLUMN_NAME IN ('paid_amount','payment_status')");
+                $meta2->execute([':db' => $currentDb2]);
+                $cols = $meta2->fetchAll(PDO::FETCH_COLUMN);
+                $hasPaid = in_array('paid_amount', $cols, true);
+                $hasStatus = in_array('payment_status', $cols, true);
+            } catch (Throwable $e) { /* ignore */ }
+            if ($hasPaid) { $columns[] = 'paid_amount'; }
+            if ($hasStatus) { $columns[] = 'payment_status'; }
             $placeholders = array_fill(0, count($columns), '?');
             $values = [];
             foreach ($columns as $c) {
@@ -80,6 +96,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     case 'unit': $values[] = $unit; break;
                     case 'report_date': $values[] = $report_date; break;
                     case 'order_date': $values[] = $order_date; break;
+                    case 'paid_amount': $values[] = $paid_amount; break;
+                    case 'payment_status': $values[] = $payment_status; break;
                     default: $values[] = null; break;
                 }
             }
@@ -252,6 +270,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <label for="order_date">Order Date</label>
         <input type="date" name="order_date" id="order_date" required>
+
+        <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+            <div style="flex:1; min-width:200px;">
+                <label for="paid_amount">Paid Amount (Rs)</label>
+                <input type="number" step="0.01" name="paid_amount" id="paid_amount" placeholder="0.00">
+            </div>
+            <div style="flex:1; min-width:200px;">
+                <label for="payment_status">Payment Status</label>
+                <select name="payment_status" id="payment_status">
+                    <option value="">-- Select --</option>
+                    <option value="paid">Paid</option>
+                    <option value="partial">Partial</option>
+                    <option value="unpaid">Unpaid</option>
+                </select>
+            </div>
+        </div>
 
         <button type="submit" class="btn">Insert Report</button>
     </form>

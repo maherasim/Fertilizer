@@ -20,6 +20,9 @@ if (!$row) {
 $quantity = (float)$row['quantity'];
 $totalSales = (float)$row['total_sales'];
 $unitPrice = $quantity > 0 ? $totalSales / $quantity : 0;
+$paidAmount = isset($row['paid_amount']) ? (float)$row['paid_amount'] : 0.0;
+$balance = max(0, $totalSales - $paidAmount);
+$paymentStatus = $row['payment_status'] ?? ($balance <= 0 ? 'paid' : ($paidAmount > 0 ? 'partial' : 'unpaid'));
 ?>
 <!DOCTYPE html>
 <html>
@@ -92,6 +95,7 @@ $unitPrice = $quantity > 0 ? $totalSales / $quantity : 0;
                     <h3>Details</h3>
                     <div>Type: <?= htmlspecialchars($row['item_type']) ?></div>
                     <div>Date: <?= htmlspecialchars(date('d-m-Y', strtotime($row['report_date']))) ?></div>
+                    <div>Status: <?= htmlspecialchars(ucfirst((string)$paymentStatus)) ?></div>
                 </div>
             </div>
         </div>
@@ -118,6 +122,7 @@ $unitPrice = $quantity > 0 ? $totalSales / $quantity : 0;
                 </tbody>
             </table>
             <div class="total">Grand Total: Rs <?= number_format($totalSales, 2) ?></div>
+            <div class="total" style="font-weight:600;">Paid: Rs <?= number_format($paidAmount, 2) ?> | Balance: Rs <?= number_format($balance, 2) ?></div>
         </div>
 
         <div class="footer no-print">

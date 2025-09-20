@@ -28,3 +28,7 @@ ALTER TABLE DailyReport ADD COLUMN IF NOT EXISTS item_id INT NULL;
 CREATE INDEX IF NOT EXISTS idx_daily_report_date ON DailyReport (report_date);
 CREATE INDEX IF NOT EXISTS idx_daily_item_type ON DailyReport (item_type);
 
+-- 4) Payment-related columns
+ALTER TABLE DailyReport ADD COLUMN IF NOT EXISTS paid_amount DECIMAL(12,2) NOT NULL DEFAULT 0;
+ALTER TABLE DailyReport ADD COLUMN IF NOT EXISTS payment_status ENUM('paid','partial','unpaid') NULL;
+
