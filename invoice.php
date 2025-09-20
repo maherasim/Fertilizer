@@ -55,6 +55,20 @@ $unitPrice = $quantity > 0 ? $totalSales / $quantity : 0;
             if (params.get('auto') === '1') {
                 setTimeout(() => window.print(), 250);
             }
+            if (params.get('download') === '1') {
+                // Trigger browser download of the rendered HTML
+                setTimeout(() => {
+                    const blob = new Blob([document.documentElement.outerHTML], {type: 'text/html'});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'invoice-' + (<?= json_encode($id) ?>) + '.html';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                }, 200);
+            }
         })();
     </script>
 </head>

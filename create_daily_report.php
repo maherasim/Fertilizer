@@ -96,11 +96,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $upd->execute([':q' => $quantity, ':id' => $item_id]);
 
             $newId = (int)$pdo->lastInsertId();
+            if ($newId <= 0) {
+                try {
+                    $idStmt = $pdo->query('SELECT MAX(id) FROM DailyReport');
+                    $newId = (int)$idStmt->fetchColumn();
+                } catch (Throwable $e) { /* ignore */ }
+            }
             $pdo->commit();
             $invoiceId = $newId > 0 ? $newId : 0;
             $success = "✅ Report inserted and stock updated. Unit price: Rs " . number_format($unit_price ?? 0, 2) .
-                        " — <a class=\"btn\" href=\"invoice.php?id=" . $invoiceId . "&auto=1\" target=\"_blank\" " .
-                        "style=\"display:inline-block; background:#1d6f42; color:#fff; padding:8px 12px; border-radius:6px; text-decoration:none;\">Download / Print Invoice</a>";
+                        "<script>(function(){try{var a=document.createElement('a');a.href='invoice.php?id=" . $invoiceId . "&download=1';a.download='invoice-" . $invoiceId . ".html';document.body.appendChild(a);a.click();a.remove();}catch(e){console.error(e);}})();</script>";
         } catch (Exception $e) {
             if ($pdo->inTransaction()) { $pdo->rollBack(); }
             $error = "❌ Error: " . $e->getMessage();
