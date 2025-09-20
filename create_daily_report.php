@@ -79,41 +79,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('Insufficient stock. Available: ' . number_format((float)$itemRow['stock_quantity'], 2));
             }
 
-            // Optional item_id column handling
+            // Optional item_id column handling (robust INFORMATION_SCHEMA check)
             $hasItemId = false;
             try {
-                $colStmt = $pdo->query("SHOW COLUMNS FROM DailyReport LIKE 'item_id'");
-                $hasItemId = (bool)$colStmt->fetch();
-            } catch (Throwable $e) { /* ignore */ }
+                // Infer current DB name safely from PDO if available
+                $dbNameStmt = $pdo->query('SELECT DATABASE()');
+                $currentDb = (string)$dbNameStmt->fetchColumn();
+                $meta = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'DailyReport' AND COLUMN_NAME = 'item_id'");
+                $meta->execute([':db' => $currentDb]);
+                $hasItemId = ((int)$meta->fetchColumn() > 0);
+            } catch (Throwable $e) { /* ignore and assume false */ }
 
+            // Build dynamic insert aligned with detected columns
+            $columns = ['item_type', 'item_name', 'customer_name', 'quantity', 'total_sales', 'unit', 'report_date', 'order_date'];
+            $params = [
+                ':item_type' => $item_type,
+                ':item_name' => $item_name,
+                ':customer_name' => $customer_name,
+                ':quantity' => $quantity,
+                ':total_sales' => $total_sales,
+                ':unit' => $unit,
+                ':report_date' => $report_date,
+                ':order_date' => $order_date,
+            ];
             if ($hasItemId) {
-                $stmt = $pdo->prepare("INSERT INTO DailyReport (item_type, item_id, item_name, customer_name, quantity, total_sales, unit, report_date, order_date)
-                                       VALUES (:item_type, :item_id, :item_name, :customer_name, :quantity, :total_sales, :unit, :report_date, :order_date)");
-                $stmt->execute([
-                    ':item_type' => $item_type,
-                    ':item_id' => $item_id,
-                    ':item_name' => $item_name,
-                    ':customer_name' => $customer_name,
-                    ':quantity' => $quantity,
-                    ':total_sales' => $total_sales,
-                    ':unit' => $unit,
-                    ':report_date' => $report_date,
-                    ':order_date' => $order_date,
-                ]);
-            } else {
-                $stmt = $pdo->prepare("INSERT INTO DailyReport (item_type, item_name, customer_name, quantity, total_sales, unit, report_date, order_date)
-                                       VALUES (:item_type, :item_name, :customer_name, :quantity, :total_sales, :unit, :report_date, :order_date)");
-                $stmt->execute([
-                    ':item_type' => $item_type,
-                    ':item_name' => $item_name,
-                    ':customer_name' => $customer_name,
-                    ':quantity' => $quantity,
-                    ':total_sales' => $total_sales,
-                    ':unit' => $unit,
-                    ':report_date' => $report_date,
-                    ':order_date' => $order_date,
-                ]);
+                array_splice($columns, 1, 0, 'item_id'); // after item_type
+                $params[':item_id'] = $item_id;
             }
+            $placeholders = array_map(function($c){ return ':' . $c; }, $columns);
+            // Map our params to the computed placeholders
+            $execParams = [];
+            foreach ($columns as $c) {
+                $key = ':' . $c;
+                if (!array_key_exists($key, $params)) {
+                    // Fill from known variables if missing
+                    switch ($c) {
+                        case 'item_id': $execParams[$key] = $item_id; break;
+                        case 'item_type': $execParams[$key] = $item_type; break;
+                        case 'item_name': $execParams[$key] = $item_name; break;
+                        case 'customer_name': $execParams[$key] = $customer_name; break;
+                        case 'quantity': $execParams[$key] = $quantity; break;
+                        case 'total_sales': $execParams[$key] = $total_sales; break;
+                        case 'unit': $execParams[$key] = $unit; break;
+                        case 'report_date': $execParams[$key] = $report_date; break;
+                        case 'order_date': $execParams[$key] = $order_date; break;
+                        default: $execParams[$key] = null; break;
+                    }
+                } else {
+                    $execParams[$key] = $params[$key];
+                }
+            }
+            $sql = 'INSERT INTO DailyReport (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')';
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($execParams);
 
             // Deduct stock atomically, prevent negative
             if ($item_type === 'fertilizer') {
