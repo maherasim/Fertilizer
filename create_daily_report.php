@@ -255,8 +255,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <input type="number" step="0.01" name="total_sales" id="total_sales">
             </div>
             <div style="flex:1; min-width:200px;">
-                <label for="unit_price">Unit Price (Rs)</label>
-                <input type="number" step="0.01" name="unit_price" id="unit_price" placeholder="Optional; auto-calculated">
+                <label for="unit_price">Sale Amount (Rs)</label>
+                <input type="number" step="0.01" name="unit_price" id="unit_price" placeholder="Auto-loaded" readonly>
             </div>
         </div>
 

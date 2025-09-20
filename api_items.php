@@ -12,19 +12,27 @@ if (!in_array($type, $validTypes, true)) {
 }
 
 try {
+    // Detect if SalePrice column exists to avoid SQL errors on older schemas
+    $db = $pdo->query('SELECT DATABASE()')->fetchColumn();
+    $hasSalePrice = false;
+    try {
+        $chk = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = :db AND COLUMN_NAME = 'SalePrice' AND TABLE_NAME IN ('Fertilizer','Pesticide')");
+        $chk->execute([':db' => $db]);
+        $hasSalePrice = ((int)$chk->fetchColumn() > 0);
+    } catch (Throwable $e) { $hasSalePrice = false; }
+
     if ($type === 'fertilizer') {
-        // Columns StockQuantity, Unit, SalePrice are optional; default accordingly.
         $stmt = $pdo->query("SELECT FertilizerID AS id, FertilizerName AS name, 
                                     COALESCE(StockQuantity, 0) AS stock_quantity, 
-                                    COALESCE(Unit, '') AS unit,
-                                    SalePrice AS sale_price
-                             FROM Fertilizer ORDER BY FertilizerName ASC");
+                                    COALESCE(Unit, '') AS unit" .
+                                    ($hasSalePrice ? ", SalePrice AS sale_price" : "") .
+                             " FROM Fertilizer ORDER BY FertilizerName ASC");
     } else {
         $stmt = $pdo->query("SELECT PesticideID AS id, PesticideName AS name, 
                                     COALESCE(StockQuantity, 0) AS stock_quantity, 
-                                    COALESCE(Unit, '') AS unit,
-                                    SalePrice AS sale_price
-                             FROM Pesticide ORDER BY PesticideName ASC");
+                                    COALESCE(Unit, '') AS unit" .
+                                    ($hasSalePrice ? ", SalePrice AS sale_price" : "") .
+                             " FROM Pesticide ORDER BY PesticideName ASC");
     }
     $items = $stmt->fetchAll();
     echo json_encode(['items' => $items]);
