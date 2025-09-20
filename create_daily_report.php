@@ -201,7 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <h2>Create Daily Report</h2>
 
     <?php if ($success): ?>
-        <div class="message success"><?= htmlspecialchars($success) ?></div>
+        <div class="message success"><?= $success ?></div>
     <?php elseif ($error): ?>
         <div class="message error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
