@@ -3,11 +3,25 @@ $pdo = new PDO("mysql:host=localhost;dbname=fertilizer", "root", "");
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $name = $_POST['name'];
-    $type = $_POST['type'];
-    $method = $_POST['method'];
-    $pdo->prepare("INSERT INTO Fertilizer (FertilizerName, Type, ApplicationMethod) VALUES (?, ?, ?)")
-        ->execute([$name, $type, $method]);
+    $name = trim($_POST['name'] ?? '');
+    $type = trim($_POST['type'] ?? '');
+    $method = trim($_POST['method'] ?? '');
+    $unit = trim($_POST['unit'] ?? '');
+    $stock = $_POST['stock_quantity'] ?? '0';
+
+    $validUnits = ['kg','ltr','gm','ml'];
+    $stock = is_numeric($stock) ? max(0, (float)$stock) : 0.0;
+    if (!in_array($unit, $validUnits, true)) { $unit = ''; }
+
+    try {
+        // Try insert with Unit and StockQuantity
+        $stmt = $pdo->prepare("INSERT INTO Fertilizer (FertilizerName, Type, ApplicationMethod, StockQuantity, Unit) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$name, $type, $method, $stock, $unit]);
+    } catch (Throwable $e) {
+        // Fallback if columns do not exist
+        $stmt = $pdo->prepare("INSERT INTO Fertilizer (FertilizerName, Type, ApplicationMethod) VALUES (?, ?, ?)");
+        $stmt->execute([$name, $type, $method]);
+    }
 }
 
 $items = $pdo->query("SELECT * FROM Fertilizer")->fetchAll();
@@ -154,19 +168,33 @@ $items = $pdo->query("SELECT * FROM Fertilizer")->fetchAll();
                 <label>Application Method:</label>
                 <input type="text" name="method" required>
 
+                <label>Unit:</label>
+                <select name="unit">
+                    <option value="">-- Select Unit --</option>
+                    <option value="kg">kg</option>
+                    <option value="ltr">ltr</option>
+                    <option value="gm">gm</option>
+                    <option value="ml">ml</option>
+                </select>
+
+                <label>Initial Stock Quantity:</label>
+                <input type="text" name="stock_quantity" placeholder="e.g., 100.00">
+
                 <input type="submit" value="Add Fertilizer">
             </form>
         </div>
 
         <h2>Fertilizer List</h2>
         <table>
-            <tr><th>ID</th><th>Name</th><th>Type</th><th>Method</th></tr>
+            <tr><th>ID</th><th>Name</th><th>Type</th><th>Method</th><th>Unit</th><th>Stock</th></tr>
             <?php foreach ($items as $i): ?>
                 <tr>
                     <td><?= htmlspecialchars($i['FertilizerID']) ?></td>
                     <td><?= htmlspecialchars($i['FertilizerName']) ?></td>
                     <td><?= htmlspecialchars($i['Type']) ?></td>
                     <td><?= htmlspecialchars($i['ApplicationMethod']) ?></td>
+                    <td><?= htmlspecialchars($i['Unit'] ?? '') ?></td>
+                    <td><?= htmlspecialchars(number_format((float)($i['StockQuantity'] ?? 0), 2)) ?></td>
                 </tr>
             <?php endforeach; ?>
         </table>
