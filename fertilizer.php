@@ -8,19 +8,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $method = trim($_POST['method'] ?? '');
     $unit = trim($_POST['unit'] ?? '');
     $stock = $_POST['stock_quantity'] ?? '0';
+    $purchase = $_POST['purchase_price'] ?? '';
+    $sale = $_POST['sale_price'] ?? '';
 
     $validUnits = ['kg','ltr','gm','ml'];
     $stock = is_numeric($stock) ? max(0, (float)$stock) : 0.0;
     if (!in_array($unit, $validUnits, true)) { $unit = ''; }
 
     try {
-        // Try insert with Unit and StockQuantity
-        $stmt = $pdo->prepare("INSERT INTO Fertilizer (FertilizerName, Type, ApplicationMethod, StockQuantity, Unit) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$name, $type, $method, $stock, $unit]);
+        // Try insert with Unit, StockQuantity, and prices
+        $stmt = $pdo->prepare("INSERT INTO Fertilizer (FertilizerName, Type, ApplicationMethod, StockQuantity, Unit, PurchasePrice, SalePrice) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$name, $type, $method, $stock, $unit, ($purchase === '' ? null : (float)$purchase), ($sale === '' ? null : (float)$sale)]);
     } catch (Throwable $e) {
         // Fallback if columns do not exist
-        $stmt = $pdo->prepare("INSERT INTO Fertilizer (FertilizerName, Type, ApplicationMethod) VALUES (?, ?, ?)");
-        $stmt->execute([$name, $type, $method]);
+        try {
+            $stmt = $pdo->prepare("INSERT INTO Fertilizer (FertilizerName, Type, ApplicationMethod, StockQuantity, Unit) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$name, $type, $method, $stock, $unit]);
+        } catch (Throwable $e2) {
+            $stmt = $pdo->prepare("INSERT INTO Fertilizer (FertilizerName, Type, ApplicationMethod) VALUES (?, ?, ?)");
+            $stmt->execute([$name, $type, $method]);
+        }
     }
 }
 
@@ -180,13 +187,19 @@ $items = $pdo->query("SELECT * FROM Fertilizer")->fetchAll();
                 <label>Initial Stock Quantity:</label>
                 <input type="text" name="stock_quantity" placeholder="e.g., 100.00">
 
+                <label>Purchase Price (Rs):</label>
+                <input type="text" name="purchase_price" placeholder="e.g., 40000">
+
+                <label>Sale Price (Rs):</label>
+                <input type="text" name="sale_price" placeholder="e.g., 43000">
+
                 <input type="submit" value="Add Fertilizer">
             </form>
         </div>
 
         <h2>Fertilizer List</h2>
         <table>
-            <tr><th>ID</th><th>Name</th><th>Type</th><th>Method</th><th>Unit</th><th>Stock</th></tr>
+            <tr><th>ID</th><th>Name</th><th>Type</th><th>Method</th><th>Unit</th><th>Stock</th><th>Purchase</th><th>Sale</th><th>Profit/Unit</th></tr>
             <?php foreach ($items as $i): ?>
                 <tr>
                     <td><?= htmlspecialchars($i['FertilizerID']) ?></td>
@@ -195,6 +208,10 @@ $items = $pdo->query("SELECT * FROM Fertilizer")->fetchAll();
                     <td><?= htmlspecialchars($i['ApplicationMethod']) ?></td>
                     <td><?= htmlspecialchars($i['Unit'] ?? '') ?></td>
                     <td><?= htmlspecialchars(number_format((float)($i['StockQuantity'] ?? 0), 2)) ?></td>
+                    <td><?= isset($i['PurchasePrice']) ? number_format((float)$i['PurchasePrice'], 2) : '-' ?></td>
+                    <td><?= isset($i['SalePrice']) ? number_format((float)$i['SalePrice'], 2) : '-' ?></td>
+                    <?php $p = isset($i['PurchasePrice']) ? (float)$i['PurchasePrice'] : null; $s = isset($i['SalePrice']) ? (float)$i['SalePrice'] : null; $profit = ($p !== null && $s !== null) ? ($s - $p) : null; ?>
+                    <td><?= $profit !== null ? number_format($profit, 2) : '-' ?></td>
                 </tr>
             <?php endforeach; ?>
         </table>

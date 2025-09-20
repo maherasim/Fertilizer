@@ -7,6 +7,12 @@ ALTER TABLE Fertilizer ADD COLUMN IF NOT EXISTS Unit VARCHAR(10) NULL;
 ALTER TABLE Pesticide ADD COLUMN IF NOT EXISTS StockQuantity DECIMAL(12,2) NOT NULL DEFAULT 0;
 ALTER TABLE Pesticide ADD COLUMN IF NOT EXISTS Unit VARCHAR(10) NULL;
 
+-- 1b) Optional pricing columns
+ALTER TABLE Fertilizer ADD COLUMN IF NOT EXISTS PurchasePrice DECIMAL(12,2) NULL;
+ALTER TABLE Fertilizer ADD COLUMN IF NOT EXISTS SalePrice DECIMAL(12,2) NULL;
+ALTER TABLE Pesticide ADD COLUMN IF NOT EXISTS PurchasePrice DECIMAL(12,2) NULL;
+ALTER TABLE Pesticide ADD COLUMN IF NOT EXISTS SalePrice DECIMAL(12,2) NULL;
+
 -- 2) Ensure DailyReport table has necessary columns
 -- Base table example (create if not exists) - adjust engine/charset as needed
 CREATE TABLE IF NOT EXISTS DailyReport (
