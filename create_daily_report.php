@@ -11,6 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
     $item_type = trim($_POST['item_type'] ?? '');
     $item_name = trim($_POST['item_name'] ?? '');
+    $customer_name = trim($_POST['customer_name'] ?? '');
     $quantity = $_POST['quantity'] ?? '';
     $total_sales = $_POST['total_sales'] ?? '';
     $unit_price = $_POST['unit_price'] ?? '';
@@ -50,11 +51,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $unit_price = $total_sales / $quantity;
         }
         try {
-            $stmt = $pdo->prepare("INSERT INTO DailyReport (item_type, item_name, quantity, total_sales, unit, report_date, order_date)
-                                   VALUES (:item_type, :item_name, :quantity, :total_sales, :unit, :report_date, :order_date)");
+            $stmt = $pdo->prepare("INSERT INTO DailyReport (item_type, item_name, customer_name, quantity, total_sales, unit, report_date, order_date)
+                                   VALUES (:item_type, :item_name, :customer_name, :quantity, :total_sales, :unit, :report_date, :order_date)");
             $stmt->execute([
                 ':item_type' => $item_type,
                 ':item_name' => $item_name,
+                ':customer_name' => $customer_name,
                 ':quantity' => $quantity,
                 ':total_sales' => $total_sales,
                 ':unit' => $unit,
@@ -163,6 +165,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <form method="post">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+        <label for="customer_name">Customer  Name</label>
+        <input type="text" name="customer_name" id="customer_name" required>
         <label for="item_type">Item Type</label>
         <select name="item_type" id="item_type" required>
             <option value="">-- Select Type --</option>
