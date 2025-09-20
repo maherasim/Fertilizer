@@ -50,6 +50,12 @@ $unitPrice = $quantity > 0 ? $totalSales / $quantity : 0;
     </style>
     <script>
         function doPrint(){ window.print(); }
+        (function(){
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('auto') === '1') {
+                setTimeout(() => window.print(), 250);
+            }
+        })();
     </script>
 </head>
 <body>

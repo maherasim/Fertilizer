@@ -97,8 +97,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $newId = (int)$pdo->lastInsertId();
             $pdo->commit();
-            $success = "✅ Report inserted and stock updated. Unit price: Rs " . number_format($unit_price, 2) . 
-                        " — <a href=\"invoice.php?id=" . $newId . "\" style=\"color:#007bff;\">View Invoice</a>";
+            $invoiceId = $newId > 0 ? $newId : 0;
+            $success = "✅ Report inserted and stock updated. Unit price: Rs " . number_format($unit_price ?? 0, 2) .
+                        " — <a class=\"btn\" href=\"invoice.php?id=" . $invoiceId . "&auto=1\" target=\"_blank\" " .
+                        "style=\"display:inline-block; background:#1d6f42; color:#fff; padding:8px 12px; border-radius:6px; text-decoration:none;\">Download / Print Invoice</a>";
         } catch (Exception $e) {
             if ($pdo->inTransaction()) { $pdo->rollBack(); }
             $error = "❌ Error: " . $e->getMessage();
