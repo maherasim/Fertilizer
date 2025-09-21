@@ -165,21 +165,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <option value="">-- Select Item --</option>
         </select>
         <input type="hidden" name="item_name" id="item_name">
-        <div id="stockInfo" style="margin-top:6px; color:#1b3e29; font-size:14px;"></div>
+        <div id="stockInfo" class="hint"></div>
 
         <label for="quantity">Quantity</label>
         <input type="number" step="0.01" name="quantity" id="quantity" required>
 
-        <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
-            <div style="flex:1; min-width:200px;">
-                <label for="total_sales">Total Sales (Rs)</label>
-                <input type="number" step="0.01" name="total_sales" id="total_sales">
-            </div>
-            <div style="flex:1; min-width:200px;">
-                <label for="unit_price">Sale Amount (Rs)</label>
-                <input type="number" step="0.01" name="unit_price" id="unit_price" placeholder="Auto-loaded" readonly>
-            </div>
-        </div>
+        <label for="unit_price">Sale Amount (Rs)</label>
+        <input type="number" step="0.01" name="unit_price" id="unit_price" placeholder="Auto-loaded" readonly>
+
+        <label for="total_sales">Total Sales (Rs)</label>
+        <input type="number" step="0.01" name="total_sales" id="total_sales">
 
         <label for="unit">Unit</label>
         <select name="unit" id="unit" required>
@@ -196,21 +191,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label for="order_date">Order Date</label>
         <input type="date" name="order_date" id="order_date" required>
 
-        <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
-            <div style="flex:1; min-width:200px;">
-                <label for="paid_amount">Paid Amount (Rs)</label>
-                <input type="number" step="0.01" name="paid_amount" id="paid_amount" placeholder="0.00">
-            </div>
-            <div style="flex:1; min-width:200px;">
-                <label for="payment_status">Payment Status</label>
-                <select name="payment_status" id="payment_status">
-                    <option value="">-- Select --</option>
-                    <option value="paid">Paid</option>
-                    <option value="partial">Partial</option>
-                    <option value="unpaid">Unpaid</option>
-                </select>
-            </div>
-        </div>
+        <label for="paid_amount">Paid Amount (Rs)</label>
+        <input type="number" step="0.01" name="paid_amount" id="paid_amount" placeholder="0.00">
+
+        <label for="payment_status">Payment Status</label>
+        <select name="payment_status" id="payment_status">
+            <option value="">-- Select --</option>
+            <option value="paid">Paid</option>
+            <option value="partial">Partial</option>
+            <option value="unpaid">Unpaid</option>
+        </select>
 
         <div style="grid-column: 1 / -1;">
             <button type="submit" class="btn-agri" style="width:100%;">Insert Report</button>
@@ -247,6 +237,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     typeEl.addEventListener('change', async function(){
         clearItems();
+        // Clear price and totals when type changes
+        unitPriceEl.value = '';
+        totalSalesEl.value = '';
         const t = typeEl.value;
         if (!t) return;
         try {
