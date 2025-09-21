@@ -17,10 +17,15 @@
     </button>
     <div class="collapse navbar-collapse" id="navMain">
       <ul class="navbar-nav ms-auto">
+        <li class="nav-item"><a class="nav-link" href="farmer.php">Farmers</a></li>
+        <li class="nav-item"><a class="nav-link" href="land.php">Land</a></li>
+        <li class="nav-item"><a class="nav-link" href="crop.php">Crops</a></li>
         <li class="nav-item"><a class="nav-link" href="fertilizer.php">Fertilizers</a></li>
         <li class="nav-item"><a class="nav-link" href="pesticide.php">Pesticides</a></li>
-        <li class="nav-item"><a class="nav-link" href="create_daily_report.php">New Sale</a></li>
+        <li class="nav-item"><a class="nav-link" href="planting.php">Planting</a></li>
+        <li class="nav-item"><a class="nav-link" href="market.php">Market Rates</a></li>
         <li class="nav-item"><a class="nav-link" href="daily_report.php">Sales Reports</a></li>
+        <li class="nav-item"><a class="nav-link" href="create_daily_report.php">New Sale</a></li>
       </ul>
     </div>
   </div>

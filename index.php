@@ -17,9 +17,45 @@
       <div class="col-12 col-md-6 col-lg-4">
         <div class="card-agri">
           <div class="card-body">
+            <div style="font-weight:700; color:#224c38;">Manage Farmers</div>
+            <div style="color:#6b7f86; font-size:14px;">Add and update farmer records</div>
+            <div style="margin-top:10px;"><a href="farmer.php" class="btn-agri">Open</a></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card-agri">
+          <div class="card-body">
+            <div style="font-weight:700; color:#224c38;">Manage Land</div>
+            <div style="color:#6b7f86; font-size:14px;">Track land parcels and usage</div>
+            <div style="margin-top:10px;"><a href="land.php" class="btn-agri">Open</a></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card-agri">
+          <div class="card-body">
             <div style="font-weight:700; color:#224c38;">Inventory - Pesticides</div>
             <div style="color:#6b7f86; font-size:14px;">Manage stock, prices, and products</div>
             <div style="margin-top:10px;"><a href="pesticide.php" class="btn-agri">Open</a></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card-agri">
+          <div class="card-body">
+            <div style="font-weight:700; color:#224c38;">Manage Crops</div>
+            <div style="color:#6b7f86; font-size:14px;">Organize seasonal crop details</div>
+            <div style="margin-top:10px;"><a href="crop.php" class="btn-agri">Open</a></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card-agri">
+          <div class="card-body">
+            <div style="font-weight:700; color:#224c38;">Planting</div>
+            <div style="color:#6b7f86; font-size:14px;">Schedules and progress</div>
+            <div style="margin-top:10px;"><a href="planting.php" class="btn-agri">Open</a></div>
           </div>
         </div>
       </div>
@@ -38,6 +74,15 @@
             <div style="font-weight:700; color:#224c38;">Sales Reports</div>
             <div style="color:#6b7f86; font-size:14px;">Analyze and export</div>
             <div style="margin-top:10px;"><a href="daily_report.php" class="btn-agri">Open</a></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card-agri">
+          <div class="card-body">
+            <div style="font-weight:700; color:#224c38;">Market Rates</div>
+            <div style="color:#6b7f86; font-size:14px;">Keep crop prices updated</div>
+            <div style="margin-top:10px;"><a href="market.php" class="btn-agri">Open</a></div>
           </div>
         </div>
       </div>
