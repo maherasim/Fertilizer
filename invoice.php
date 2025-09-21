@@ -29,10 +29,11 @@ $paymentStatus = $row['payment_status'] ?? ($balance <= 0 ? 'paid' : ($paidAmoun
 <head>
     <title>Invoice #<?= htmlspecialchars((string)$id) ?></title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="assets/styles.css">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; margin:0; background:#f6f8f9; }
+        body { background:#f6f8f9; }
         .container { max-width: 800px; margin: 30px auto; background:#fff; border-radius:10px; box-shadow:0 10px 25px rgba(0,0,0,0.08); overflow:hidden; }
-        .header { display:flex; justify-content:space-between; align-items:center; padding:24px; border-bottom:4px solid #28a745; }
+        .header { display:flex; justify-content:space-between; align-items:center; padding:24px; border-bottom:4px solid var(--brand); }
         .brand { font-size:22px; font-weight:700; color:#1b3e29; }
         .meta { text-align:right; color:#666; }
         .section { padding:24px; }
@@ -44,7 +45,7 @@ $paymentStatus = $row['payment_status'] ?? ($balance <= 0 ? 'paid' : ($paidAmoun
         th { background:#f3fdf3; color:#1b3e29; }
         .total { text-align:right; padding:16px 0; font-weight:700; color:#1b3e29; }
         .footer { padding:16px 24px 24px; display:flex; justify-content:space-between; align-items:center; }
-        .btn { background:#28a745; color:#fff; border:none; padding:10px 16px; border-radius:6px; cursor:pointer; text-decoration:none; }
+        .btn { background:var(--brand); color:#fff; border:none; padding:10px 16px; border-radius:6px; cursor:pointer; text-decoration:none; }
         @media print {
             .no-print { display:none !important; }
             body { background:#fff; }

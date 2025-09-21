@@ -137,90 +137,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Create Daily Report</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: #eef5f0;
-            margin: 0;
-            padding: 30px;
-        }
-        .form-container {
-            max-width: 600px;
-            margin: auto;
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-        body {
-    font-family: 'Segoe UI', sans-serif;
-    background: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTv9HhJz378pHqf8bKFo3J1P9rrdVQ3ODvmig&s') no-repeat center center fixed;
-    background-size: cover;
-    margin: 0;
-    padding: 30px;
-}
+<?php include __DIR__ . '/header.php'; ?>
 
-        h2 {
-            text-align: center;
-            color: #2d4739;
-        }
-        label {
-            font-weight: bold;
-            display: block;
-            margin-top: 15px;
-        }
-        input, select {
-            width: 100%;
-            padding: 10px;
-            margin-top: 5px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-        }
-        .btn {
-            margin-top: 20px;
-            padding: 12px;
-            width: 100%;
-            background: #28a745;
-            color: white;
-            border: none;
-            font-size: 16px;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-        .btn:hover {
-            background: #218838;
-        }
-        .message {
-            margin-top: 20px;
-            padding: 12px;
-            border-radius: 6px;
-        }
-        .success {
-            background: #d4edda;
-            color: #155724;
-        }
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        .back-link {
-            text-align: center;
-            margin-top: 25px;
-        }
-        .back-link a {
-            color: #007bff;
-            text-decoration: none;
-        }
-    </style>
-</head>
-<body>
-
-<div class="form-container">
-    <h2>Create Daily Report</h2>
+<div class="card-agri">
+  <div class="card-header">Create Daily Report</div>
+  <div class="card-body">
 
     <?php if ($success): ?>
         <div class="message success"><?= $success ?></div>
@@ -228,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="message error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <form method="post" id="reportForm">
+    <form method="post" id="reportForm" class="form-grid">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
         <label for="customer_name">Customer  Name</label>
         <input type="text" name="customer_name" id="customer_name" required>
@@ -291,14 +212,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
 
-        <button type="submit" class="btn">Insert Report</button>
+        <div style="grid-column: 1 / -1;">
+            <button type="submit" class="btn-agri" style="width:100%;">Insert Report</button>
+        </div>
     </form>
-
-    <div class="back-link">
-        <a href="daily_report.php">← Back to Report</a>
-    </div>
+  </div>
 </div>
-
+<?php include __DIR__ . '/footer.php'; ?>
 <script>
 // Dependent dropdowns and live stock display
 (function(){
@@ -380,5 +300,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 })();
 </script>
 
-</body>
-</html>

@@ -106,101 +106,11 @@ $topPesticideStmt->execute($dateParams);
 $topPesticide = $topPesticideStmt->fetch();
 ?>
 
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Daily Report</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: url('https://tse3.mm.bing.net/th/id/OIP.Pe1l8_ckcbE8bQ3ntdWA5gHaFj?pid=Api&P=0&h=220') no-repeat center center fixed;
-            background-size: cover;
-            margin: 0;
-            padding: 0;
-        }
-        .overlay {
-            min-height: 100vh;
-            padding: 50px 20px;
-        }
-        .report-container {
-            max-width: 1000px;
-            margin: auto;
-            background: #fff;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
-        }
-        .report-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 3px solid #28a745;
-            padding-bottom: 10px;
-            margin-bottom: 25px;
-        }
-        .report-header h1 {
-            font-size: 26px;
-            color: #2d4739;
-            margin: 0;
-        }
-        .report-header .date {
-            font-weight: 600;
-            color: #555;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        thead th {
-            background-color: #28a745;
-            color: white;
-            text-align: left;
-            padding: 14px 10px;
-        }
-        tbody td {
-            padding: 12px 10px;
-            border-bottom: 1px solid #e0e0e0;
-            font-size: 14px;
-            color: #333;
-        }
-        tbody tr:hover {
-            background: #f3fdf3;
-        }
-        .summary {
-            margin-top: 30px;
-            background: #f9fff9;
-            border: 1px solid #cfe8d5;
-            padding: 15px;
-            border-radius: 6px;
-            color: #1c3b2c;
-        }
-        .summary h3 {
-            margin-top: 0;
-        }
-        .total-summary {
-            margin-top: 20px;
-            text-align: right;
-            font-weight: bold;
-            font-size: 16px;
-            color: #1b3e29;
-        }
-        .no-data {
-            text-align: center;
-            color: #888;
-            font-style: italic;
-            margin-top: 20px;
-        }
-    </style>
-</head>
-<body>
+<?php include __DIR__ . '/header.php'; ?>
 
-<div class="overlay">
-    <div class="report-container">
-        <div class="report-header">
-            <h1>🌾 All Sales Report</h1>
-            <div class="date"><?= date('l, d M Y') ?></div>
-        </div>
+<div class="card-agri">
+  <div class="card-header">All Sales Report</div>
+  <div class="card-body">
 
         <form method="get" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
             <div>
@@ -243,7 +153,7 @@ $topPesticide = $topPesticideStmt->fetch();
                    <strong>Total Sales:</strong> Rs <?= number_format($sumSales, 2) ?>,
                    <strong>Avg Unit Price:</strong> Rs <?= number_format($avgUnitPrice, 2) ?></p>
             </div>
-            <table>
+            <table class="table-agri">
                 <thead>
                     <tr>
                         <th>Type</th>
@@ -316,7 +226,7 @@ $topPesticide = $topPesticideStmt->fetch();
         <?php else: ?>
             <p class="no-data">No records found in the database.</p>
         <?php endif; ?>
-    </div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -343,5 +253,4 @@ $topPesticide = $topPesticideStmt->fetch();
     }
 })();
 </script>
-</body>
-</html>
+<?php include __DIR__ . '/footer.php'; ?>
